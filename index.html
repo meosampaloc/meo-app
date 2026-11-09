@@ -4,25 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MEO App</title>
-<meta name="theme-color" content="#7B7FE8">
+<meta name="theme-color" content="#0B3D91">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="seal-meo.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-body{margin:0;font:16px system-ui,Segoe UI,Arial,sans-serif;background:#F7F5FB;color:#2F2A40;min-height:100vh;display:grid;place-items:center}
-.card{background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(60,50,100,.12);padding:28px;width:min(400px,calc(100vw - 32px));box-sizing:border-box}
-h1{font-size:24px;margin:0 0 4px}p{margin:6px 0 14px;color:#6B6680}
-input{width:100%;box-sizing:border-box;font:inherit;padding:12px 14px;border:1px solid #D9D4E8;border-radius:10px;margin:6px 0 12px}
-button{width:100%;font:inherit;font-weight:600;padding:12px;border:0;border-radius:10px;background:#7B7FE8;color:#fff;cursor:pointer}
-button.link{background:none;color:#7B7FE8;width:auto;padding:6px 0}
-.bar{height:8px;background:#ECE7F5;border-radius:9px;overflow:hidden;margin:14px 0}.bar i{display:block;height:100%;width:0;background:#7B7FE8;transition:width .2s}
+body{margin:0;font:16px system-ui,Segoe UI,Arial,sans-serif;color:#14213D;min-height:100vh;display:grid;place-items:center;background:radial-gradient(90% 60% at 50% 0%,rgba(11,74,162,.22),transparent 70%),#EEF2F8}
+.card{background:#fff;border-radius:22px;border-top:5px solid #F28C1E;box-shadow:0 14px 40px rgba(11,40,90,.16);padding:30px 28px 24px;width:min(400px,calc(100vw - 32px));box-sizing:border-box;text-align:center}
+.seals{display:flex;justify-content:center;gap:12px;margin:-2px 0 14px}.seals img{width:76px;height:76px;border-radius:50%;box-shadow:0 6px 16px rgba(11,40,90,.18)}
+h1{font-size:26px;margin:0 0 2px;color:#0B4AA2;font-weight:800}p{margin:6px 0 14px;color:#5E6B84}
+form{text-align:left}
+input{width:100%;box-sizing:border-box;font:inherit;padding:12px 14px;border:1px solid #D5DDEA;border-radius:12px;margin:6px 0 12px;background:#F7F9FC}
+input:focus{outline:3px solid #BFD3F2;border-color:#0B4AA2;background:#fff}
+button{width:100%;font:inherit;font-weight:700;padding:13px;border:0;border-radius:12px;background:linear-gradient(180deg,#1259BD,#0B4AA2);color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(11,74,162,.25)}
+button.link{background:none;color:#0B4AA2;width:auto;padding:6px 0;box-shadow:none}
+.bar{height:8px;background:#E4ECF8;border-radius:9px;overflow:hidden;margin:14px 0}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#0B4AA2,#F28C1E);transition:width .2s}
 .err{color:#C2410C}.small{font-size:13px}
+.lgu{font-size:12px;color:#8592A8;margin:14px 0 0}
 </style>
 </head>
 <body>
-<div class="card" id="c"><h1>MEO App</h1><p>Municipal Engineering Office, Sampaloc</p><div class="bar"><i id="p"></i></div><p id="t" class="small">Opening…</p></div>
+<div class="card" id="c"><div class="seals"><img src="seal-meo.png" alt="MEO seal"><img src="seal-lgu.png" alt="Municipality of Sampaloc seal"></div><h1>MEO App</h1><p>Municipal Engineering Office, Sampaloc</p><div class="bar"><i id="p"></i></div><p id="t" class="small">Opening…</p></div>
 <script>
 (()=>{
 /* MEO App loader: signs in, keeps the app on this device, opens it even without internet. */
@@ -58,15 +62,15 @@ function run(html){
   document.open();document.write(html);document.close();
 }
 function loginForm(msg){
-  $('c').innerHTML=`<h1>MEO App</h1><p>Sign in with your gov mail (or the email the office registered for you) and your password. Any phone or computer works.</p>
+  $('c').innerHTML=`<div class="seals"><img src="seal-meo.png" alt="MEO seal"><img src="seal-lgu.png" alt="Municipality of Sampaloc seal"></div><h1>MEO App</h1><p>Sign in with your gov mail (or the email the office registered for you) and your password. Any phone or computer works.</p>
   <form id="f1"><input id="em" type="email" required placeholder="name@sampaloc.gov.ph" autocomplete="username" value="${LSg('meo.email')||''}">
   <input id="pw" type="password" required placeholder="Password" autocomplete="current-password"><button>Sign in</button></form>
-  <p id="m" class="small ${msg?'err':''}">${msg||'Use your email and the password the office gave you. Forgot it? Ask the Municipal Engineer.'}</p>`;
+  <p id="m" class="small ${msg?'err':''}">${msg||'Use your email and the password the office gave you. Forgot it? Ask the Municipal Engineer.'}</p><p class="lgu">Municipality of Sampaloc, Province of Quezon</p>`;
   $('f1').onsubmit=async e=>{e.preventDefault();const em=$('em').value.trim().toLowerCase();$('m').className='small';$('m').textContent='Signing in…';
     try{const r=await post('login',{email:em,password:$('pw').value});LSs('meo.token',r.token);LSs('meo.email',r.email);start()}
     catch(err){$('m').className='small err';$('m').textContent=err.net?'No internet. Signing in on a new device needs internet once.':err.message}};
 }
-function card(){if(!$('t'))$('c').innerHTML='<h1>MEO App</h1><p>Municipal Engineering Office, Sampaloc</p><div class="bar"><i id="p"></i></div><p id="t" class="small">Opening…</p>'}
+function card(){if(!$('t'))$('c').innerHTML='<div class="seals"><img src="seal-meo.png" alt="MEO seal"><img src="seal-lgu.png" alt="Municipality of Sampaloc seal"></div><h1>MEO App</h1><p>Municipal Engineering Office, Sampaloc</p><div class="bar"><i id="p"></i></div><p id="t" class="small">Opening…</p>'}
 async function start(){
   card();
   if('serviceWorker' in navigator){try{await navigator.serviceWorker.register('sw.js')}catch(e){console.warn(e)}}

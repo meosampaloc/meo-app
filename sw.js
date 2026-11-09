@@ -1,6 +1,6 @@
 /* MEO App service worker: keeps the app shell, fonts and every map picture you have viewed, for offline use. */
-const SHELL='meo-shell-v1', TILES='meo-tiles-v1', FONTS='meo-fonts-v1';
-const SHELL_FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
+const SHELL='meo-shell-v2', TILES='meo-tiles-v1', FONTS='meo-fonts-v1';
+const SHELL_FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./seal-meo.png','./seal-lgu.png'];
 const TILE_HOSTS=/(^|\.)(arcgisonline\.com|tile\.openstreetmap\.org|opentopomap\.org)$/;
 const MAX_TILES=20000;
 
