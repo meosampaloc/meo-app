@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MEO App</title>
+<meta name="theme-color" content="#7B7FE8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+body{margin:0;font:16px system-ui,Segoe UI,Arial,sans-serif;background:#F7F5FB;color:#2F2A40;min-height:100vh;display:grid;place-items:center}
+.card{background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(60,50,100,.12);padding:28px;width:min(400px,calc(100vw - 32px));box-sizing:border-box}
+h1{font-size:24px;margin:0 0 4px}p{margin:6px 0 14px;color:#6B6680}
+input{width:100%;box-sizing:border-box;font:inherit;padding:12px 14px;border:1px solid #D9D4E8;border-radius:10px;margin:6px 0 12px}
+button{width:100%;font:inherit;font-weight:600;padding:12px;border:0;border-radius:10px;background:#7B7FE8;color:#fff;cursor:pointer}
+button.link{background:none;color:#7B7FE8;width:auto;padding:6px 0}
+.bar{height:8px;background:#ECE7F5;border-radius:9px;overflow:hidden;margin:14px 0}.bar i{display:block;height:100%;width:0;background:#7B7FE8;transition:width .2s}
+.err{color:#C2410C}.small{font-size:13px}
+</style>
+</head>
+<body>
+<div class="card" id="c"><h1>MEO App</h1><p>Municipal Engineering Office, Sampaloc</p><div class="bar"><i id="p"></i></div><p id="t" class="small">Opening…</p></div>
+<script>
+(()=>{
+/* MEO App loader: signs in, keeps the app on this device, opens it even without internet. */
+const BACKEND='https://script.google.com/macros/s/AKfycbzGQGiUQHMBRnodiZRw7XgloyLbKPb-bETB87kywpgOt_aW7_Ia73aPPIMYVVkX2qIy/exec';
+const $=id=>document.getElementById(id);
+const LSg=k=>{try{return localStorage.getItem(k)}catch{return null}},LSs=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch{}};
+async function post(op,body,ms){
+  const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),ms||30000);
+  let r;try{r=await fetch(BACKEND,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...body,op,token:LSg('meo.token')}),signal:ctl.signal,redirect:'follow'})}
+  catch(e){throw Object.assign(new Error('No connection to the server'),{net:true})}finally{clearTimeout(tm)}
+  if(!r.ok)throw Object.assign(new Error('Server error '+r.status),{net:r.status>=500});
+  const j=await r.json();
+  if(!j.ok){if(String(j.error).startsWith('SIGNIN:')){signedOut(String(j.error).slice(7).trim())}throw new Error(String(j.error).replace(/^SIGNIN:\s*/,''))}
+  return j.data;
+}
+function signedOut(msg){LSs('meo.token',null);if(window.MEO_SYNC&&window.MEO_SYNC.onSignedOut)window.MEO_SYNC.onSignedOut(msg)}
+const CACHE='meo-app-v1';
+async function cachedApp(){try{const c=await caches.open(CACHE);const r=await c.match('app.html');const m=await c.match('app-meta.json');if(!r)return null;return {html:await r.text(),meta:m?await m.json():{}}}catch{return null}}
+async function downloadApp(info,progress){
+  const parts=[];for(let i=0;i<info.parts;i++){parts.push(await post('appPart',{i},120000));progress&&progress((i+1)/info.parts)}
+  const html=parts.join('');const c=await caches.open(CACHE);
+  await c.put('app.html',new Response(html,{headers:{'Content-Type':'text/html'}}));
+  await c.put('app-meta.json',new Response(JSON.stringify({mod:info.mod,at:Date.now()}),{headers:{'Content-Type':'application/json'}}));
+  return html;
+}
+function run(html){
+  let updateCb=null;
+  window.MEO_SYNC={backend:BACKEND,email:LSg('meo.email'),post,
+    onUpdate(cb){updateCb=cb;if(window.__meoUpd)cb()},
+    onSignedOut(msg){alert((msg||'Please sign in again.')+'\n\nYour unsynced work stays on this device.');location.reload()},
+    async signOut(){try{await post('logout',{},8000)}catch{}LSs('meo.token',null);LSs('meo.email',null);try{await caches.delete(CACHE)}catch{}try{indexedDB.deleteDatabase('meo-sync')}catch{}}};
+  window.__meoUpdCheck=async(mod)=>{try{const info=await post('appInfo',{},20000);if(info.mod>mod){await downloadApp(info);window.__meoUpd=1;updateCb&&updateCb()}}catch{}};
+  document.open();document.write(html);document.close();
+}
+function loginForm(msg){
+  $('c').innerHTML=`<h1>MEO App</h1><p>Sign in with your gov mail (or the email the office registered for you) and your password. Any phone or computer works.</p>
+  <form id="f1"><input id="em" type="email" required placeholder="name@sampaloc.gov.ph" autocomplete="username" value="${LSg('meo.email')||''}">
+  <input id="pw" type="password" required placeholder="Password" autocomplete="current-password"><button>Sign in</button></form>
+  <p id="m" class="small ${msg?'err':''}">${msg||'Use your email and the password the office gave you. Forgot it? Ask the Municipal Engineer.'}</p>`;
+  $('f1').onsubmit=async e=>{e.preventDefault();const em=$('em').value.trim().toLowerCase();$('m').className='small';$('m').textContent='Signing in…';
+    try{const r=await post('login',{email:em,password:$('pw').value});LSs('meo.token',r.token);LSs('meo.email',r.email);start()}
+    catch(err){$('m').className='small err';$('m').textContent=err.net?'No internet. Signing in on a new device needs internet once.':err.message}};
+}
+function card(){if(!$('t'))$('c').innerHTML='<h1>MEO App</h1><p>Municipal Engineering Office, Sampaloc</p><div class="bar"><i id="p"></i></div><p id="t" class="small">Opening…</p>'}
+async function start(){
+  card();
+  if('serviceWorker' in navigator){try{await navigator.serviceWorker.register('sw.js')}catch(e){console.warn(e)}}
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch{}
+  const cached=await cachedApp();
+  if(!LSg('meo.token')){if(cached&&!navigator.onLine){$('t').textContent='You are offline and signed out. Connect to the internet to sign in.';return}return loginForm()}
+  if(cached){run(cached.html);setTimeout(()=>window.__meoUpdCheck(cached.meta.mod||0),4000);return}
+  if(!navigator.onLine){$('t').textContent='The first time, MEO App needs internet to download (about 2 MB). After that it works offline.';return}
+  try{$('t').textContent='Downloading MEO App…';const info=await post('appInfo',{});const html=await downloadApp(info,f=>{$('p').style.width=Math.round(f*100)+'%'});run(html)}
+  catch(e){if(!LSg('meo.token'))return loginForm(e.message);$('t').innerHTML='<span class="err">Couldn’t download MEO App: '+e.message+'</span>'}
+}
+start();
+})();
+</script>
+</body>
+</html>
